@@ -1,41 +1,54 @@
-# Use Alpine Linux as base with go-ethereum
-FROM alpine:latest
+# Use Alpine Linux as base and install geth using apk
+FROM alpine:3.18
 
-# Install dependencies
+# Install geth from Alpine packages and other tools
 RUN apk add --no-cache \
+    geth \
     bash \
-    curl \
-    jq \
-    bc \
-    ca-certificates
-
-# Install Go Ethereum
-RUN wget -O /tmp/geth.tar.gz https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.13.5-916d6a44.tar.gz && \
-    cd /tmp && \
-    tar -xzf geth.tar.gz && \
-    mv geth-linux-amd64-*/geth /usr/local/bin/ && \
-    rm -rf /tmp/geth*
+    curl
 
 # Set working directory
 WORKDIR /app
 
 # Create necessary directories
-RUN mkdir -p /app/data /app/keystore /app/scripts
+RUN mkdir -p /app/data /app/keystore
 
 # Copy configuration files
-COPY genesis.json /app/
-COPY scripts/ /app/scripts/
-COPY keystore/ /app/keystore/
+COPY genesis.json /app/genesis.json
 
-# Make scripts executable
-RUN chmod +x /app/scripts/*.sh
+# Create an empty password file
+RUN echo "" > /app/password.txt
 
 # Expose ports
-# 8545: HTTP-RPC server
-# 8546: WS-RPC server  
-# 30303: P2P network
-# 6060: Metrics server
 EXPOSE 8545 8546 30303 6060
 
-# Set default command
-CMD ["/bin/bash", "/app/scripts/start.sh"]
+# Initialize the blockchain and start geth
+CMD ["sh", "-c", "\
+    echo '🚀 Starting Geth Testnet Node...' && \
+    if [ ! -d '/app/data/geth' ]; then \
+        echo '📦 Initializing Geth with genesis block...' && \
+        geth --datadir /app/data init /app/genesis.json; \
+    fi && \
+    echo '⚙️ Starting Geth node...' && \
+    geth \
+        --datadir /app/data \
+        --networkid 1337 \
+        --port 30303 \
+        --http \
+        --http.addr 0.0.0.0 \
+        --http.port 8545 \
+        --http.api eth,net,web3,personal,miner,admin,debug \
+        --http.corsdomain '*' \
+        --ws \
+        --ws.addr 0.0.0.0 \
+        --ws.port 8546 \
+        --ws.api eth,net,web3,personal,miner,admin,debug \
+        --ws.origins '*' \
+        --allow-insecure-unlock \
+        --password /app/password.txt \
+        --nodiscover \
+        --maxpeers 0 \
+        --mine \
+        --miner.threads 1 \
+        --miner.etherbase 0x947f0dC0B7462e022ae8B54DBCAC315E9Eba8b75 \
+        --verbosity 3"]
