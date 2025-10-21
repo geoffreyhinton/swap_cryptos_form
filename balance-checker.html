@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Balance Checker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 5px; background: #f0f0f0; }
+        .success { background: #d4edda; }
+        .error { background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Balance Checker</h1>
+    
+    <p><strong>Expected Account:</strong> 0x2c7536E3605D9C16a7a3D7b1898e529396a65c23</p>
+    
+    <button onclick="checkDirectRPC()">Check via Direct RPC</button>
+    <button onclick="checkViaMetaMask()">Check via MetaMask</button>
+    <button onclick="connectMetaMask()">Connect MetaMask</button>
+    <button onclick="switchToLocalNetwork()" style="background: #007bff; color: white;">🔄 Switch to Local Network</button>
+    <button onclick="forceRefreshBalance()" style="background: #28a745; color: white;">🔄 Force Refresh MetaMask</button>
+    
+    <div id="results"></div>
+
+    <script>
+        function addResult(message, isSuccess = true) {
+            const div = document.createElement('div');
+            div.className = `result ${isSuccess ? 'success' : 'error'}`;
+            div.innerHTML = message;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function checkDirectRPC() {
+            document.getElementById('results').innerHTML = '';
+            addResult('🔄 Checking direct RPC connection...');
+            
+            try {
+                const response = await fetch('http://localhost:8545', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_getBalance',
+                        params: ['0x2c7536E3605D9C16a7a3D7b1898e529396a65c23', 'latest'],
+                        id: 1
+                    })
+                });
+                
+                const data = await response.json();
+                const balance = parseInt(data.result, 16) / Math.pow(10, 18);
+                
+                addResult(`✅ Direct RPC: ${balance.toFixed(4)} ETH`, balance > 0);
+                
+            } catch (error) {
+                addResult(`❌ Direct RPC Error: ${error.message}`, false);
+            }
+        }
+
+        async function connectMetaMask() {
+            if (typeof window.ethereum === 'undefined') {
+                addResult('❌ MetaMask not installed', false);
+                return;
+            }
+
+            try {
+                await window.ethereum.request({ method: 'eth_requestAccounts' });
+                addResult('✅ MetaMask connected');
+                
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                addResult(`🌐 Chain ID: ${parseInt(chainId, 16)} (should be 1337)`, parseInt(chainId, 16) === 1337);
+                
+            } catch (error) {
+                addResult(`❌ MetaMask connection failed: ${error.message}`, false);
+            }
+        }
+
+        async function checkViaMetaMask() {
+            if (typeof window.ethereum === 'undefined') {
+                addResult('❌ MetaMask not installed', false);
+                return;
+            }
+
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                const account = accounts[0];
+                
+                addResult(`👤 Connected Account: ${account}`);
+                
+                if (account.toLowerCase() !== '0x2c7536e3605d9c16a7a3d7b1898e529396a65c23') {
+                    addResult('⚠️ Wrong account! Expected: 0x2c7536E3605D9C16a7a3D7b1898e529396a65c23', false);
+                    return;
+                }
+                
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [account, 'latest']
+                });
+                
+                const balanceETH = parseInt(balance, 16) / Math.pow(10, 18);
+                addResult(`💰 MetaMask Balance: ${balanceETH.toFixed(4)} ETH`, balanceETH > 0);
+                
+                if (balanceETH === 0) {
+                    addResult('🔧 Try: Settings → Advanced → Reset Account in MetaMask', false);
+                }
+                
+            } catch (error) {
+                addResult(`❌ MetaMask Error: ${error.message}`, false);
+            }
+        }
+
+        async function switchToLocalNetwork() {
+            if (typeof window.ethereum === 'undefined') {
+                addResult('❌ MetaMask not installed', false);
+                return;
+            }
+
+            try {
+                // Try to switch to existing network
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x539' }], // 1337 in hex
+                });
+                addResult('✅ Switched to Local Network (Chain ID 1337)');
+                
+            } catch (switchError) {
+                // Network doesn't exist, add it
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: '0x539',
+                                chainName: 'Local Testnet',
+                                rpcUrls: ['http://localhost:8545'],
+                                nativeCurrency: {
+                                    name: 'Ethereum',
+                                    symbol: 'ETH',
+                                    decimals: 18
+                                }
+                            }]
+                        });
+                        addResult('✅ Added and switched to Local Network');
+                    } catch (addError) {
+                        addResult(`❌ Failed to add network: ${addError.message}`, false);
+                    }
+                } else {
+                    addResult(`❌ Failed to switch network: ${switchError.message}`, false);
+                }
+            }
+        }
+
+        async function forceRefreshBalance() {
+            if (typeof window.ethereum === 'undefined') {
+                addResult('❌ MetaMask not installed', false);
+                return;
+            }
+
+            try {
+                addResult('🔄 Attempting to force refresh...');
+                
+                // Try multiple refresh methods
+                
+                // 1. Request permissions again
+                await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+                addResult('✅ Refreshed permissions');
+                
+                // 2. Get fresh account list
+                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+                addResult(`✅ Refreshed accounts: ${accounts[0]}`);
+                
+                // 3. Force balance check with latest block
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [accounts[0], 'latest']
+                });
+                
+                const balanceETH = parseInt(balance, 16) / Math.pow(10, 18);
+                addResult(`💰 Fresh Balance: ${balanceETH.toFixed(4)} ETH`, balanceETH > 0);
+                
+                if (balanceETH === 0) {
+                    addResult('⚠️ Still 0 ETH. Try MetaMask Settings → Advanced → Reset Account', false);
+                }
+                
+            } catch (error) {
+                addResult(`❌ Refresh Error: ${error.message}`, false);
+                addResult('💡 Manually try: MetaMask Settings → Advanced → Reset Account', false);
+            }
+        }
+    </script>
+</body>
+</html>
