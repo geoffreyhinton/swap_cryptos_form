@@ -9,10 +9,15 @@
     "check-balance": "node -e \"const {ethers} = require('ethers'); const provider = new ethers.JsonRpcProvider('http://localhost:8545'); provider.getBalance('0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf').then(b => console.log('Balance:', ethers.formatEther(b), 'ETH'));\""
   },
   "dependencies": {
-    "ethers": "^6.8.0",
+    "ethers": "^6.15.0",
     "web3": "^4.2.0"
   },
-  "keywords": ["ethereum", "blockchain", "web3", "testnet"],
+  "keywords": [
+    "ethereum",
+    "blockchain",
+    "web3",
+    "testnet"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }

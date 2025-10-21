@@ -19,14 +19,14 @@ COPY genesis.json /app/genesis.json
 # Expose ports
 EXPOSE 8545 8546 30303 6060
 
-# Initialize the blockchain and start geth without mining
+# Start geth without mining (manual mining activation)
 CMD ["sh", "-c", "\
     echo '🚀 Starting Geth Testnet Node...' && \
     if [ ! -d '/app/data/geth' ]; then \
         echo '📦 Initializing Geth with genesis block...' && \
         geth --datadir /app/data init /app/genesis.json; \
     fi && \
-    echo '⚙️ Starting Geth RPC node (no mining)...' && \
+    echo '⚙️ Starting Geth RPC node (mining can be enabled via RPC)...' && \
     geth \
         --datadir /app/data \
         --networkid 1337 \
