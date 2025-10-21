@@ -23,10 +23,16 @@ if [ ! -d "$DATA_DIR/geth" ]; then
     geth --datadir $DATA_DIR init $GENESIS_FILE
 fi
 
+# Create empty password file for account operations
+echo "" > /tmp/empty_password.txt
+
 # Create accounts if keystore is empty
 if [ ! "$(ls -A /app/keystore 2>/dev/null)" ]; then
     echo "🔑 Creating default accounts..."
-    /app/scripts/create-accounts.sh
+    for i in {1..3}; do
+        echo "Creating account $i..."
+        geth --datadir $DATA_DIR account new --password /tmp/empty_password.txt
+    done
 fi
 
 # Copy accounts to data directory
@@ -42,8 +48,8 @@ echo "HTTP RPC: http://localhost:$HTTP_PORT"
 echo "WebSocket: ws://localhost:$WS_PORT"
 echo "Mining: $MINING"
 
-# Build geth command
-GETH_CMD="geth \
+# Start Geth node
+geth \
     --datadir $DATA_DIR \
     --networkid $NETWORK_ID \
     --port $P2P_PORT \
@@ -58,18 +64,12 @@ GETH_CMD="geth \
     --ws.api eth,net,web3,personal,miner,admin,debug \
     --ws.origins '*' \
     --allow-insecure-unlock \
-    --unlock 0,1,2 \
-    --password /dev/null \
+    --password /tmp/empty_password.txt \
     --metrics \
     --metrics.addr 0.0.0.0 \
     --metrics.port 6060 \
     --nodiscover \
-    --maxpeers 0"
-
-# Add mining if enabled
-if [ "$MINING" = "true" ]; then
-    GETH_CMD="$GETH_CMD --mine --miner.threads $MINER_THREADS --miner.etherbase 0x947f0dC0B7462e022ae8B54DBCAC315E9Eba8b75"
-fi
-
-echo "🎯 Executing: $GETH_CMD"
-exec $GETH_CMD
+    --maxpeers 0 \
+    --mine \
+    --miner.threads $MINER_THREADS \
+    --miner.etherbase 0x947f0dC0B7462e022ae8B54DBCAC315E9Eba8b75

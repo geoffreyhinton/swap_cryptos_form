@@ -1,5 +1,20 @@
-# Use the official Go Ethereum image
-FROM ethereum/client-go:latest
+# Use Alpine Linux as base with go-ethereum
+FROM alpine:latest
+
+# Install dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    jq \
+    bc \
+    ca-certificates
+
+# Install Go Ethereum
+RUN wget -O /tmp/geth.tar.gz https://gethstore.blob.core.windows.net/builds/geth-linux-amd64-1.13.5-916d6a44.tar.gz && \
+    cd /tmp && \
+    tar -xzf geth.tar.gz && \
+    mv geth-linux-amd64-*/geth /usr/local/bin/ && \
+    rm -rf /tmp/geth*
 
 # Set working directory
 WORKDIR /app
@@ -23,4 +38,4 @@ RUN chmod +x /app/scripts/*.sh
 EXPOSE 8545 8546 30303 6060
 
 # Set default command
-CMD ["/app/scripts/start.sh"]
+CMD ["/bin/bash", "/app/scripts/start.sh"]

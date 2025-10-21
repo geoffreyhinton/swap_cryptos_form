@@ -11,10 +11,13 @@ KEYSTORE_DIR="/app/keystore"
 # Create keystore directory if it doesn't exist
 mkdir -p $KEYSTORE_DIR
 
+# Create empty password file
+echo "" > /tmp/empty_password.txt
+
 # Create 3 accounts with empty passwords
 for i in {1..3}; do
     echo "Creating account $i..."
-    echo "" | geth --datadir $DATA_DIR account new --password /dev/stdin
+    geth --datadir $DATA_DIR account new --password /tmp/empty_password.txt
 done
 
 echo "✅ Created 3 test accounts"
