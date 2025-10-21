@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Ethereum Explorer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .logo {
+            font-size: 2.5em;
+            font-weight: 800;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+        
+        .button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            margin: 10px 0;
+            transition: border-color 0.3s;
+        }
+        
+        .input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .result {
+            background: #f8f9ff;
+            border: 1px solid #e0e8ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.9em;
+        }
+        
+        .success { border-color: #4ade80; background: #f0fdf4; }
+        .error { border-color: #ef4444; background: #fef2f2; }
+        
+        .block-item, .tx-item {
+            background: #f8f9ff;
+            border: 1px solid #e0e8ff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            transition: all 0.3s;
+        }
+        
+        .block-item:hover, .tx-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .hash {
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.85em;
+            color: #667eea;
+            word-break: break-all;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #667eea;
+            font-size: 1.1em;
+            margin: 20px 0;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">🔍 Local Ethereum Explorer</div>
+            <div class="subtitle">Explore your local testnet blockchain</div>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="blockNumber">-</div>
+                    <div class="stat-label">Latest Block</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="chainId">-</div>
+                    <div class="stat-label">Chain ID</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="networkStatus">-</div>
+                    <div class="stat-label">Network Status</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid-2">
+            <div class="section">
+                <h2>🔍 Search</h2>
+                <input type="text" class="input" id="searchInput" placeholder="Enter block number, transaction hash, or address">
+                <button class="button" onclick="search()">Search</button>
+                <button class="button" onclick="getLatestBlock()">Latest Block</button>
+                <button class="button" onclick="refreshStats()">Refresh</button>
+                <div id="searchResults"></div>
+            </div>
+
+            <div class="section">
+                <h2>💰 Account Balances</h2>
+                <div id="accountBalances"></div>
+                <input type="text" class="input" id="addressInput" placeholder="Enter address to check balance">
+                <button class="button" onclick="checkBalance()">Check Balance</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📦 Recent Blocks</h2>
+            <div id="recentBlocks"></div>
+        </div>
+
+        <div class="section">
+            <h2>💸 Recent Transactions</h2>
+            <div id="recentTransactions"></div>
+        </div>
+    </div>
+
+    <script>
+        const RPC_URL = 'http://localhost:8545';
+        
+        // Test accounts from your genesis
+        const TEST_ACCOUNTS = [
+            '0x2c7536E3605D9C16a7a3D7b1898e529396a65c23',
+            '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
+            '0x90F79bf6EB2c4f870365E785982E1f101E93b906'
+        ];
+
+        async function rpcCall(method, params = []) {
+            try {
+                const response = await fetch(RPC_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: method,
+                        params: params,
+                        id: Date.now()
+                    })
+                });
+                const data = await response.json();
+                if (data.error) throw new Error(data.error.message);
+                return data.result;
+            } catch (error) {
+                console.error('RPC Error:', error);
+                throw error;
+            }
+        }
+
+        function displayResult(elementId, content, type = 'success') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${content}</div>`;
+        }
+
+        function formatAddress(address) {
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        function formatHash(hash) {
+            return `${hash.slice(0, 10)}...${hash.slice(-8)}`;
+        }
+
+        async function refreshStats() {
+            try {
+                const [blockNumber, chainId] = await Promise.all([
+                    rpcCall('eth_blockNumber'),
+                    rpcCall('eth_chainId')
+                ]);
+
+                document.getElementById('blockNumber').textContent = parseInt(blockNumber, 16);
+                document.getElementById('chainId').textContent = parseInt(chainId, 16);
+                document.getElementById('networkStatus').textContent = '🟢 Online';
+            } catch (error) {
+                document.getElementById('networkStatus').textContent = '🔴 Offline';
+            }
+        }
+
+        async function getLatestBlock() {
+            try {
+                const blockNumber = await rpcCall('eth_blockNumber');
+                const block = await rpcCall('eth_getBlockByNumber', [blockNumber, true]);
+                
+                let content = `
+                    <h3>Block #${parseInt(block.number, 16)}</h3>
+                    <p><strong>Hash:</strong> <span class="hash">${block.hash}</span></p>
+                    <p><strong>Timestamp:</strong> ${new Date(parseInt(block.timestamp, 16) * 1000).toISOString()}</p>
+                    <p><strong>Transactions:</strong> ${block.transactions.length}</p>
+                    <p><strong>Gas Used:</strong> ${parseInt(block.gasUsed, 16).toLocaleString()}</p>
+                `;
+
+                if (block.transactions.length > 0) {
+                    content += `<h4>Transactions:</h4>`;
+                    block.transactions.slice(0, 5).forEach((tx, i) => {
+                        const value = parseInt(tx.value, 16) / Math.pow(10, 18);
+                        content += `
+                            <div class="tx-item">
+                                <p><strong>Hash:</strong> <span class="hash">${tx.hash}</span></p>
+                                <p><strong>From:</strong> ${formatAddress(tx.from)}</p>
+                                <p><strong>To:</strong> ${tx.to ? formatAddress(tx.to) : 'Contract Creation'}</p>
+                                <p><strong>Value:</strong> ${value.toFixed(4)} ETH</p>
+                            </div>
+                        `;
+                    });
+                }
+
+                displayResult('searchResults', content);
+            } catch (error) {
+                displayResult('searchResults', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function search() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            try {
+                // Try as block number
+                if (/^\d+$/.test(query)) {
+                    const block = await rpcCall('eth_getBlockByNumber', [`0x${parseInt(query).toString(16)}`, true]);
+                    if (block) {
+                        let content = `
+                            <h3>Block #${parseInt(block.number, 16)}</h3>
+                            <p><strong>Hash:</strong> <span class="hash">${block.hash}</span></p>
+                            <p><strong>Timestamp:</strong> ${new Date(parseInt(block.timestamp, 16) * 1000).toISOString()}</p>
+                            <p><strong>Transactions:</strong> ${block.transactions.length}</p>
+                        `;
+                        displayResult('searchResults', content);
+                        return;
+                    }
+                }
+
+                // Try as transaction hash
+                if (query.startsWith('0x') && query.length === 66) {
+                    const tx = await rpcCall('eth_getTransactionByHash', [query]);
+                    if (tx) {
+                        const value = parseInt(tx.value, 16) / Math.pow(10, 18);
+                        let content = `
+                            <h3>Transaction Details</h3>
+                            <p><strong>Hash:</strong> <span class="hash">${tx.hash}</span></p>
+                            <p><strong>Block:</strong> ${parseInt(tx.blockNumber, 16)}</p>
+                            <p><strong>From:</strong> <span class="hash">${tx.from}</span></p>
+                            <p><strong>To:</strong> <span class="hash">${tx.to}</span></p>
+                            <p><strong>Value:</strong> ${value.toFixed(4)} ETH</p>
+                            <p><strong>Gas:</strong> ${parseInt(tx.gas, 16).toLocaleString()}</p>
+                        `;
+                        displayResult('searchResults', content);
+                        return;
+                    }
+                }
+
+                // Try as address
+                if (query.startsWith('0x') && query.length === 42) {
+                    const balance = await rpcCall('eth_getBalance', [query, 'latest']);
+                    const balanceEth = parseInt(balance, 16) / Math.pow(10, 18);
+                    let content = `
+                        <h3>Address Details</h3>
+                        <p><strong>Address:</strong> <span class="hash">${query}</span></p>
+                        <p><strong>Balance:</strong> ${balanceEth.toFixed(4)} ETH</p>
+                    `;
+                    displayResult('searchResults', content);
+                    return;
+                }
+
+                displayResult('searchResults', 'No results found. Try a block number, transaction hash, or address.', 'error');
+            } catch (error) {
+                displayResult('searchResults', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkBalance() {
+            const address = document.getElementById('addressInput').value.trim();
+            if (!address) return;
+
+            try {
+                const balance = await rpcCall('eth_getBalance', [address, 'latest']);
+                const balanceEth = parseInt(balance, 16) / Math.pow(10, 18);
+                displayResult('searchResults', `Balance: ${balanceEth.toFixed(4)} ETH for ${formatAddress(address)}`);
+            } catch (error) {
+                displayResult('searchResults', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadAccountBalances() {
+            let content = '';
+            for (const account of TEST_ACCOUNTS) {
+                try {
+                    const balance = await rpcCall('eth_getBalance', [account, 'latest']);
+                    const balanceEth = parseInt(balance, 16) / Math.pow(10, 18);
+                    content += `
+                        <div class="block-item">
+                            <p><strong>${formatAddress(account)}</strong></p>
+                            <p>${balanceEth.toFixed(4)} ETH</p>
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error loading balance for', account, error);
+                }
+            }
+            document.getElementById('accountBalances').innerHTML = content;
+        }
+
+        async function loadRecentBlocks() {
+            try {
+                const latestBlockHex = await rpcCall('eth_blockNumber');
+                const latestBlock = parseInt(latestBlockHex, 16);
+                
+                let content = '';
+                const blocksToShow = Math.min(5, latestBlock + 1);
+                
+                for (let i = 0; i < blocksToShow; i++) {
+                    const blockNum = latestBlock - i;
+                    if (blockNum < 0) break;
+                    
+                    const block = await rpcCall('eth_getBlockByNumber', [`0x${blockNum.toString(16)}`, false]);
+                    content += `
+                        <div class="block-item">
+                            <h4>Block #${blockNum}</h4>
+                            <p><strong>Hash:</strong> ${formatHash(block.hash)}</p>
+                            <p><strong>Transactions:</strong> ${block.transactions.length}</p>
+                            <p><strong>Time:</strong> ${new Date(parseInt(block.timestamp, 16) * 1000).toLocaleString()}</p>
+                        </div>
+                    `;
+                }
+                
+                document.getElementById('recentBlocks').innerHTML = content || '<p>No blocks found</p>';
+            } catch (error) {
+                document.getElementById('recentBlocks').innerHTML = `<p class="error">Error loading blocks: ${error.message}</p>`;
+            }
+        }
+
+        async function loadRecentTransactions() {
+            try {
+                const latestBlockHex = await rpcCall('eth_blockNumber');
+                const latestBlock = parseInt(latestBlockHex, 16);
+                
+                let content = '';
+                let txCount = 0;
+                
+                for (let i = 0; i <= latestBlock && txCount < 10; i++) {
+                    const blockNum = latestBlock - i;
+                    const block = await rpcCall('eth_getBlockByNumber', [`0x${blockNum.toString(16)}`, true]);
+                    
+                    if (block.transactions.length > 0) {
+                        block.transactions.forEach(tx => {
+                            if (txCount >= 10) return;
+                            const value = parseInt(tx.value, 16) / Math.pow(10, 18);
+                            content += `
+                                <div class="tx-item">
+                                    <p><strong>Hash:</strong> ${formatHash(tx.hash)}</p>
+                                    <p><strong>Block:</strong> #${blockNum}</p>
+                                    <p><strong>From:</strong> ${formatAddress(tx.from)} → <strong>To:</strong> ${formatAddress(tx.to)}</p>
+                                    <p><strong>Value:</strong> ${value.toFixed(4)} ETH</p>
+                                </div>
+                            `;
+                            txCount++;
+                        });
+                    }
+                }
+                
+                document.getElementById('recentTransactions').innerHTML = content || '<p>No transactions found</p>';
+            } catch (error) {
+                document.getElementById('recentTransactions').innerHTML = `<p class="error">Error loading transactions: ${error.message}</p>`;
+            }
+        }
+
+        // Initialize the page
+        async function init() {
+            await refreshStats();
+            await loadAccountBalances();
+            await loadRecentBlocks();
+            await loadRecentTransactions();
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(init, 30000);
+
+        // Initial load
+        init();
+
+        // Enter key support for search
+        document.getElementById('searchInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') search();
+        });
+        
+        document.getElementById('addressInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') checkBalance();
+        });
+    </script>
+</body>
+</html>

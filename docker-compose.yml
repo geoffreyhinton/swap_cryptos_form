@@ -24,25 +24,19 @@ services:
     networks:
       - geth-network
 
-  # Optional: Ethereum block explorer
-  blockscout:
-    image: blockscout/blockscout:latest
-    container_name: blockscout
+  # Custom Ethereum Block Explorer
+  explorer:
+    image: nginx:alpine
+    container_name: eth-explorer
     ports:
-      - "4000:4000"
-    environment:
-      - ETHEREUM_JSONRPC_VARIANT=geth
-      - ETHEREUM_JSONRPC_HTTP_URL=http://geth:8545
-      - ETHEREUM_JSONRPC_WS_URL=ws://geth:8546
-      - COIN=ETH
-      - LOGO=/images/blockscout_logo.svg
-      - LOGO_FOOTER=/images/blockscout_logo.svg
+      - "4000:80"
+    volumes:
+      - ./explorer.html:/usr/share/nginx/html/index.html:ro
     depends_on:
       - geth
     networks:
       - geth-network
-    profiles:
-      - explorer
+    restart: unless-stopped
 
 volumes:
   geth_data:
