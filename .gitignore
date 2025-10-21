@@ -1,0 +1,27 @@
+# Docker volumes and data
+data/
+*.log
+
+# Environment variables (optional - keep .env for easy setup)
+# .env
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (if any JavaScript tools are added)
+node_modules/
+
+# Python cache (if any Python tools are added)  
+__pycache__/
+*.pyc
+
+# Backup files
+*.bak
+*.backup

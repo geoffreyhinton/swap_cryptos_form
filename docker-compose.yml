@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  geth:
+    build: .
+    container_name: geth-testnet
+    ports:
+      - "8545:8545"   # HTTP-RPC
+      - "8546:8546"   # WS-RPC
+      - "30303:30303" # P2P
+      - "6060:6060"   # Metrics
+    volumes:
+      - geth_data:/app/data
+      - ./genesis.json:/app/genesis.json
+      - ./scripts:/app/scripts
+      - ./keystore:/app/keystore
+    environment:
+      - NETWORK_ID=${NETWORK_ID:-1337}
+      - CHAIN_ID=${CHAIN_ID:-1337}
+      - HTTP_PORT=${HTTP_PORT:-8545}
+      - WS_PORT=${WS_PORT:-8546}
+      - P2P_PORT=${P2P_PORT:-30303}
+      - MINING=${MINING:-true}
+      - MINER_THREADS=${MINER_THREADS:-1}
+    restart: unless-stopped
+    networks:
+      - geth-network
+
+  # Optional: Ethereum block explorer
+  blockscout:
+    image: blockscout/blockscout:latest
+    container_name: blockscout
+    ports:
+      - "4000:4000"
+    environment:
+      - ETHEREUM_JSONRPC_VARIANT=geth
+      - ETHEREUM_JSONRPC_HTTP_URL=http://geth:8545
+      - ETHEREUM_JSONRPC_WS_URL=ws://geth:8546
+      - COIN=ETH
+      - LOGO=/images/blockscout_logo.svg
+      - LOGO_FOOTER=/images/blockscout_logo.svg
+    depends_on:
+      - geth
+    networks:
+      - geth-network
+    profiles:
+      - explorer
+
+volumes:
+  geth_data:
+
+networks:
+  geth-network:
+    driver: bridge
